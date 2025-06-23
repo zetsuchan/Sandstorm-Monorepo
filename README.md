@@ -10,7 +10,7 @@ AI teams now juggle 4-5 sandbox clouds—E2B for quick REPLs, Modal for heavy jo
 
 Sandstorm is a vendor-agnostic Sandbox Routing Layer that provides:
 
-- **One 5-line SDK** (`sandstorm.run(code, spec)`) that dispatches to E2B, Daytona, Modal, Morph, or your own Kubernetes cluster
+- **One 5-line SDK** (`sandstorm.run(code, spec)`) that dispatches to E2B, Daytona, Modal, Morph, your own Kubernetes cluster, or rootless edge agents
 - **Smart arbitrage engine** chooses the fastest or cheapest backend in real time, with automatic retry on quota errors
 - **Unified telemetry & billing**: single dashboard for logs, snapshots, spend, and compliance across all sandboxes
 - **Pluggable policies**: bring-your-own isolation rules, egress firewall, Secrets Manager integration, SOC-2 audit trail
@@ -93,7 +93,8 @@ const result = await sandstorm.run({
 sandstorm-monorepo/
 ├── packages/
 │   ├── core/           # Core interfaces and types
-│   ├── sdk/            # Client SDKs
+│   ├── sdk/            # Client SDKs with edge mode support
+│   ├── edge-agent/     # Rootless edge agent for self-hosted execution
 │   ├── adapters/       # Provider-specific adapters
 │   ├── arbitrage/      # Cost optimization engine
 │   └── telemetry/      # Unified logging/monitoring
@@ -102,7 +103,7 @@ sandstorm-monorepo/
 │   └── snapshot-vault/ # Durable state storage
 ├── apps/
 │   └── dashboard/      # Web monitoring dashboard
-└── docs/               # Documentation
+└── docs/               # Documentation and deployment guides
 ```
 
 ## Getting Started
@@ -129,6 +130,26 @@ pnpm build
 pnpm dev
 ```
 
+### Self-Hosted Edge Deployment
+
+For running sandboxes on your own infrastructure:
+
+```bash
+# Install edge agent globally
+npm install -g @sandstorm/edge-agent
+
+# Check system requirements
+sandstorm-edge check
+
+# Initialize configuration
+sandstorm-edge init
+
+# Start edge agent
+sandstorm-edge start -c sandstorm-edge.json
+```
+
+See the [Self-Hosted Deployment Guide](./docs/self-hosted-deployment.md) for detailed setup instructions.
+
 ## Business Model
 
 - **Usage fee**: 5% margin on pass-through compute plus $0.001 per snapshot GB-hour
@@ -138,6 +159,8 @@ pnpm dev
 ## Roadmap
 
 - [x] Core routing engine
+- [x] Rootless edge agent with Podman support
+- [x] SDK with edge mode integration
 - [ ] E2B, Modal, Daytona adapters
 - [ ] Cost optimization algorithm
 - [ ] Snapshot vault with on-chain anchoring

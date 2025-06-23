@@ -1,0 +1,158 @@
+# Sandstorm Security Monitor Configuration
+
+# Server Configuration
+server:
+  port: 8081
+  host: "0.0.0.0"
+  workers: 4
+
+# Database Configuration
+database:
+  url: "postgres://postgres:postgres@localhost/sandstorm_security"
+  max_connections: 20
+  min_connections: 5
+  max_lifetime: 3600
+  idle_timeout: 600
+  acquire_timeout: 30
+
+# eBPF Configuration
+ebpf:
+  enabled: true
+  programs:
+    - name: "file_monitor"
+      type: "tracepoint"
+      attach_point: "syscalls:sys_enter_openat"
+    - name: "network_monitor"
+      type: "kprobe"
+      attach_point: "tcp_v4_connect"
+    - name: "process_monitor"
+      type: "tracepoint"
+      attach_point: "sched:sched_process_exec"
+  maps:
+    process_start_times:
+      type: "hash"
+      max_entries: 10240
+    network_stats:
+      type: "array"
+      max_entries: 1024
+
+# Falco Configuration
+falco:
+  enabled: true
+  binary_path: "/usr/bin/falco"
+  rules_path: "/etc/falco/rules.yaml"
+  custom_rules_path: "/etc/falco/sandstorm-rules.yaml"
+  output_format: "json"
+  priority_threshold: "WARNING"
+
+# SIEM Integration
+siem:
+  enabled: false
+  webhook_url: ""
+  api_key: ""
+  batch_size: 100
+  flush_interval_ms: 5000
+  timeout_ms: 30000
+  retry_attempts: 3
+  retry_delay_ms: 1000
+
+# Security Policies
+policies:
+  default_tier: "basic"
+  auto_load_defaults: true
+  custom_policies_dir: "/etc/sandstorm/policies"
+  
+# Event Processing
+events:
+  batch_size: 1000
+  buffer_size: 10000
+  flush_interval_ms: 1000
+  compression: true
+  deduplication_window_ms: 5000
+
+# Quarantine Configuration
+quarantine:
+  auto_release: false
+  max_duration_hours: 24
+  notification_webhooks: []
+  isolation_method: "network_policy" # or "pod_deletion"
+
+# Metrics and Monitoring
+metrics:
+  prometheus_enabled: true
+  prometheus_port: 9090
+  retention_days: 30
+  aggregation_intervals:
+    - "1m"
+    - "5m" 
+    - "1h"
+    - "24h"
+
+# Dashboard Configuration
+dashboard:
+  websocket_enabled: true
+  max_connections: 100
+  ping_interval_ms: 30000
+  real_time_updates: true
+
+# Compliance Configuration
+compliance:
+  standards:
+    - "pci-dss"
+    - "hipaa"
+    - "soc2"
+    - "iso27001"
+    - "gdpr"
+  report_schedule: "0 0 1 * *" # Monthly at midnight on 1st
+  retention_months: 12
+  auto_generate: true
+
+# Provenance Configuration
+provenance:
+  enabled: true
+  signing_key_path: "/etc/sandstorm/provenance.key"
+  blockchain_anchoring: false
+  chains:
+    ethereum:
+      rpc_url: "https://mainnet.infura.io/v3/YOUR_KEY"
+      contract_address: "0x..."
+    polygon:
+      rpc_url: "https://polygon-rpc.com"
+      contract_address: "0x..."
+
+# Logging Configuration
+logging:
+  level: "info"
+  format: "json"
+  file: "/var/log/sandstorm/security-monitor.log"
+  max_size: "100MB"
+  max_files: 10
+  compress: true
+
+# Resource Limits
+resources:
+  max_memory_mb: 1024
+  max_cpu_percent: 50
+  max_disk_usage_gb: 10
+  event_queue_size: 50000
+
+# Security Configuration
+security:
+  api_key_required: false
+  api_key_header: "X-API-Key"
+  rate_limiting:
+    enabled: true
+    requests_per_minute: 1000
+    burst_size: 100
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+    allowed_headers: ["Content-Type", "Authorization"]
+
+# Development Settings
+development:
+  mock_events: false
+  event_generation_rate: 10 # events per second
+  debug_mode: false
+  hot_reload: false

@@ -1,0 +1,166 @@
+name: Edge Agent Tests
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'packages/edge-agent/**'
+      - 'packages/sdk/**'
+      - 'packages/core/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'packages/edge-agent/**'
+      - 'packages/sdk/**'
+      - 'packages/core/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+          
+          # Configure rootless podman
+          sudo mkdir -p /etc/containers
+          echo 'unqualified-search-registries = ["docker.io"]' | sudo tee /etc/containers/registries.conf
+          
+          # Enable user namespaces
+          echo 'user.max_user_namespaces=28633' | sudo tee /etc/sysctl.d/99-rootless.conf
+          sudo sysctl -p /etc/sysctl.d/99-rootless.conf
+          
+          # Setup subuid/subgid for rootless
+          sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 runner
+          
+          # Start rootless podman
+          systemctl --user enable --now podman.socket
+          
+          # Test podman
+          podman --version
+          podman info
+
+      - name: Build packages
+        run: pnpm build
+      
+      - name: Run unit tests
+        run: pnpm test --filter @sandstorm/edge-agent
+        
+      - name: Run type checking
+        run: pnpm typecheck --filter @sandstorm/edge-agent
+      
+      - name: Run integration tests
+        run: |
+          export RUN_INTEGRATION_TESTS=true
+          pnpm test --filter @sandstorm/edge-agent
+        env:
+          RUN_INTEGRATION_TESTS: true
+      
+      - name: Test CLI commands
+        run: |
+          cd packages/edge-agent
+          
+          # Test check command
+          node dist/cli.js check --runtime podman
+          
+          # Test init command
+          node dist/cli.js init --output test-config.json
+          
+          # Verify config was created
+          cat test-config.json
+
+  docker-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Build packages
+        run: pnpm build
+      
+      - name: Test with Docker runtime
+        run: |
+          cd packages/edge-agent
+          
+          # Test check command with docker
+          node dist/cli.js check --runtime docker
+          
+          # Test basic functionality (without actually starting to avoid conflicts)
+          node -e "
+            const { createEdgeAgent } = require('./dist/index.js');
+            createEdgeAgent({
+              runtime: 'docker',
+              rootless: false
+            }).then(() => console.log('Docker adapter created successfully'));
+          "
+
+  edge-mode-sdk-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Build packages
+        run: pnpm build
+      
+      - name: Test SDK edge mode
+        run: |
+          cd packages/sdk
+          
+          # Test edge mode client creation
+          node -e "
+            const { createSandstormEdge } = require('./dist/index.js');
+            const client = createSandstormEdge({
+              edgeAgents: [{ agentUrl: 'http://localhost:8080' }]
+            });
+            console.log('Edge SDK client created successfully');
+          "
+          
+          # Test types compilation
+          npx tsc --noEmit examples/edge-mode.ts

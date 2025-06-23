@@ -1,14 +1,10 @@
 {
-  "name": "@sandstorm/sdk",
+  "name": "@sandstorm/adapter-bare-metal",
   "version": "0.0.1",
-  "description": "Sandstorm client SDK",
+  "description": "Bare-metal provider adapter for Sandstorm",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "examples"
-  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,9 +21,13 @@
   },
   "dependencies": {
     "@sandstorm/core": "workspace:*",
-    "axios": "^1.6.5"
+    "@sandstorm/bootc-builder": "workspace:*",
+    "node-ssh": "^13.1.0",
+    "uuid": "^9.0.1",
+    "ipaddr.js": "^2.1.0"
   },
   "devDependencies": {
+    "@types/uuid": "^9.0.7",
     "@types/node": "^20.11.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3"

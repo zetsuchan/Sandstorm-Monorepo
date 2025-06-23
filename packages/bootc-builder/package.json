@@ -1,14 +1,10 @@
 {
-  "name": "@sandstorm/sdk",
+  "name": "@sandstorm/bootc-builder",
   "version": "0.0.1",
-  "description": "Sandstorm client SDK",
+  "description": "Bootable container builder for Sandstorm",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "examples"
-  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -25,9 +21,14 @@
   },
   "dependencies": {
     "@sandstorm/core": "workspace:*",
-    "axios": "^1.6.5"
+    "dockerode": "^4.0.2",
+    "tar-fs": "^3.0.5",
+    "crypto": "^1.0.1",
+    "stream": "^0.0.2"
   },
   "devDependencies": {
+    "@types/dockerode": "^3.3.23",
+    "@types/tar-fs": "^2.0.4",
     "@types/node": "^20.11.0",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3"

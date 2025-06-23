@@ -13,7 +13,12 @@ export interface RunOptions {
   requirements?: string[];
   environment?: Record<string, string>;
   files?: Record<string, string>;
-  constraints?: SandboxConstraints;
+  constraints?: SandboxConstraints & {
+    cpu?: number;
+    memory?: number;
+    timeout?: number;
+    gpu?: boolean;
+  };
 }
 
 export class Sandstorm {
