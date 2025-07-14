@@ -29,6 +29,19 @@ export const SandboxSpec = z.object({
   dockerfile: z.string().optional(), // Dockerfile content for bootc building
   isolationLevel: IsolationLevel.default('standard'),
   runtimePreference: RuntimeType.optional(),
+  
+  // Provider-specific features
+  streaming: z.boolean().optional(), // Enable streaming output (E2B, Modal)
+  containerImage: z.string().optional(), // Custom container image (Modal)
+  workspaceTemplate: z.string().optional(), // Workspace template (Daytona)
+  gitRepo: z.string().optional(), // Git repository to clone (Daytona)
+  gitBranch: z.string().optional(), // Git branch (Daytona)
+  persistSession: z.boolean().optional(), // Keep session alive (E2B)
+  sessionId: z.string().optional(), // Reuse existing session (E2B)
+  volumes: z.record(z.string()).optional(), // Volume mounts (Modal)
+  secrets: z.array(z.string()).optional(), // Secret names (Modal)
+  networkAccess: z.boolean().optional(), // Allow network access (Modal)
+  customTemplate: z.string().optional(), // Custom sandbox template (E2B)
 });
 export type SandboxSpec = z.infer<typeof SandboxSpec>;
 

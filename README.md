@@ -96,6 +96,10 @@ sandstorm-monorepo/
 │   ├── sdk/            # Client SDKs with edge mode support
 │   ├── edge-agent/     # Rootless edge agent for self-hosted execution
 │   ├── adapters/       # Provider-specific adapters
+│   │   ├── e2b/        # E2B Code Interpreter integration
+│   │   ├── modal/      # Modal serverless infrastructure
+│   │   ├── daytona/    # Daytona fast workspace provider
+│   │   └── bare-metal/ # Bare metal with bootc images
 │   ├── arbitrage/      # Cost optimization engine
 │   └── telemetry/      # Unified logging/monitoring
 ├── services/

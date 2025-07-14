@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Sandstorm Contributors
+
 #![recursion_limit = "256"]
 
 use axum::{

@@ -1,0 +1,74 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.0] - 2025-07-13
+
+### Added
+- **Provider Adapters**: Implemented specific adapters for major sandbox providers
+  - E2B adapter (`@sandstorm/adapters-e2b`) with Code Interpreter SDK integration
+  - Modal adapter (`@sandstorm/adapters-modal`) with serverless container support
+  - Daytona adapter (`@sandstorm/adapters-daytona`) with ultra-fast 90ms startup
+- **Unified API Layer**: Extended core types to support provider-specific features while maintaining a consistent interface
+- **Streaming Support**: Added `StreamHandlers` interface for real-time output streaming
+- **Provider-Specific Features**:
+  - E2B: Jupyter notebook support, data visualization, persistent sessions
+  - Modal: Custom container images, GPU support, function deployment
+  - Daytona: Workspace templates, Git integration, persistent workspaces
+- **Cost & Latency Optimization**: Smart provider selection based on constraints
+- **Comprehensive Examples**: Added unified usage examples demonstrating cross-provider execution
+
+### Changed
+- Extended `SandboxSpec` type with provider-specific optional fields
+- Enhanced `ISandboxProvider` interface with streaming support and cleanup methods
+- Updated README with new adapter documentation
+
+### Technical Details
+- **Languages**: TypeScript (90%), Rust (8%), Python (2%)
+- **Dependencies**: Added provider SDKs (@e2b/code-interpreter, modal, @daytonaio/sdk)
+- **Build System**: Configured tsup for all adapter packages
+
+## [0.1.0] - 2025-01-12
+
+### Added
+- **Core Infrastructure**: Monorepo setup with pnpm workspaces and Turbo
+- **Base Packages**:
+  - `@sandstorm/core`: Core interfaces and types
+  - `@sandstorm/sdk`: Client SDK with cloud and edge modes
+  - `@sandstorm/edge-agent`: Rootless edge agent using Podman
+  - `@sandstorm/arbitrage`: Cost optimization engine
+  - `@sandstorm/ml-router`: ML-based routing with LightGBM
+  - `@sandstorm/security`: Runtime security monitoring
+  - `@sandstorm/telemetry`: Unified logging and monitoring
+  - `@sandstorm/bootc-builder`: Bootable container images
+- **Rust Services**:
+  - Gateway service with pluggable containerd shims
+  - Telemetry collector
+  - Security monitor with eBPF
+  - Snapshot vault for durable state
+- **Provider Support**: Initial bare-metal adapter
+- **Documentation**: Comprehensive README, implementation plans, and ML orchestration guide
+
+### Technical Foundation
+- **Architecture**: Vendor-agnostic sandbox routing layer
+- **Security**: Multi-tier security model with Falco integration
+- **Deployment**: Support for cloud, edge, and bare-metal deployments
+- **Observability**: OpenTelemetry-based telemetry stack
+
+## [0.0.1] - 2025-01-11
+
+### Added
+- Initial project setup
+- Basic monorepo structure
+- License (MIT)
+- Core package definitions
+
+[Unreleased]: https://github.com/sandstorm/sandstorm/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sandstorm/sandstorm/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/sandstorm/sandstorm/compare/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/sandstorm/sandstorm/releases/tag/v0.0.1

@@ -10,15 +10,23 @@ import {
   SecurityTier 
 } from './types';
 
+export interface StreamHandlers {
+  onStdout?: (data: string) => void;
+  onStderr?: (data: string) => void;
+  onExit?: (code: number) => void;
+  onError?: (error: Error) => void;
+}
+
 export interface ISandboxProvider {
   name: SandboxProvider;
   isAvailable(): Promise<boolean>;
   estimateCost(spec: SandboxSpec): Promise<number>;
   estimateLatency(spec: SandboxSpec): Promise<number>;
-  run(spec: SandboxSpec): Promise<SandboxResult>;
+  run(spec: SandboxSpec, streamHandlers?: StreamHandlers): Promise<SandboxResult>;
   snapshot(sandboxId: string): Promise<SandboxSnapshot>;
   restore(snapshotId: string): Promise<string>;
   getQuota(): Promise<{ used: number; limit: number }>;
+  cleanup?(): Promise<void>;
 }
 
 export interface IArbitrageEngine {
