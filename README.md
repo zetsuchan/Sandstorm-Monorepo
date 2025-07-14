@@ -1,5 +1,11 @@
 # Sandstorm - Vendor-Agnostic Sandbox Routing Layer
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://img.shields.io/github/actions/workflow/status/zetsuchan/Sandstorm-Monorepo/ci.yml?label=CI)](https://github.com/zetsuchan/Sandstorm-Monorepo/actions)
+[![Rust](https://img.shields.io/badge/rust-1.82%2B-orange.svg)](https://www.rust-lang.org/)
+[![Production Ready](https://img.shields.io/badge/production-ready-brightgreen.svg)](https://github.com/zetsuchan/Sandstorm-Monorepo)
+[![Sandstorm](https://img.shields.io/badge/Sandstorm-2024--2025-blue.svg)](https://github.com/zetsuchan/Sandstorm-Monorepo)
+
 > One API to rule them all. Route AI workloads to E2B, Modal, Daytona, or your own K8s—automatically picking the fastest and cheapest option.
 
 ## Problem
