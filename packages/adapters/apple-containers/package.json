@@ -1,0 +1,59 @@
+{
+  "name": "@sandstorm/adapters-apple-containers",
+  "version": "0.3.0",
+  "description": "Apple Containers adapter for Sandstorm - Native macOS containerization with VM-level isolation",
+  "keywords": [
+    "sandstorm",
+    "adapter",
+    "apple",
+    "containers",
+    "macos",
+    "virtualization",
+    "sandbox"
+  ],
+  "author": "Sandstorm Team",
+  "homepage": "https://github.com/sandstorm/sandstorm#readme",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sandstorm/sandstorm.git",
+    "directory": "packages/adapters/apple-containers"
+  },
+  "scripts": {
+    "build": "bun ../../../scripts/build.ts --format both",
+    "clean": "rm -rf dist",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sandstorm/core": "workspace:*",
+    "execa": "^8.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-types": "latest",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@sandstorm/core": "workspace:*"
+  }
+}

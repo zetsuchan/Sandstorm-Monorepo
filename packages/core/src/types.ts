@@ -1,10 +1,11 @@
 import { z } from 'zod';
 
-export const SandboxProvider = z.enum(['e2b', 'modal', 'daytona', 'morph', 'kubernetes', 'bare-metal', 'edge', 'custom']);
+export const SandboxProvider = z.enum(['e2b', 'modal', 'daytona', 'morph', 'kubernetes', 'bare-metal', 'edge', 'apple-containers', 'custom']);
 export type SandboxProvider = z.infer<typeof SandboxProvider>;
 
-export const Language = z.enum(['python', 'javascript', 'typescript', 'go', 'rust', 'java', 'cpp', 'shell']);
+export const Language = z.enum(['python', 'javascript', 'typescript', 'go', 'rust', 'java', 'cpp', 'csharp', 'php', 'ruby', 'shell']);
 export type Language = z.infer<typeof Language>;
+export type SandboxLanguage = Language; // Alias for backward compatibility
 
 export const IsolationLevel = z.enum(['standard', 'strong', 'maximum']);
 export type IsolationLevel = z.infer<typeof IsolationLevel>;
@@ -42,6 +43,9 @@ export const SandboxSpec = z.object({
   secrets: z.array(z.string()).optional(), // Secret names (Modal)
   networkAccess: z.boolean().optional(), // Allow network access (Modal)
   customTemplate: z.string().optional(), // Custom sandbox template (E2B)
+  customKernel: z.string().optional(), // Custom kernel path (Apple Containers)
+  enableRosetta: z.boolean().optional(), // Enable Rosetta 2 for x86_64 (Apple Containers)
+  architecture: z.enum(['arm64', 'amd64']).optional(), // Container architecture (Apple Containers)
 });
 export type SandboxSpec = z.infer<typeof SandboxSpec>;
 

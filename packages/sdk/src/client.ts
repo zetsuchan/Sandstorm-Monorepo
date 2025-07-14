@@ -42,6 +42,7 @@ export class Sandstorm {
       requirements: options.requirements,
       environment: options.environment,
       files: options.files,
+      isolationLevel: 'standard',
     } : options;
 
     const response = await this.client.post<SandboxResult>('/v1/sandboxes/run', {

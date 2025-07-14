@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0] - 2025-07-14
 
+### Added
+- **Apple Containers Adapter**: Native macOS containerization support with VM-level isolation
+  - Each container runs in its own lightweight virtual machine
+  - Deep integration with macOS tools (Keychain, XPC, vmnet)
+  - Sub-second startup despite VM overhead
+  - Rosetta 2 support for x86_64 containers on Apple Silicon
+  - Enhanced security through complete kernel isolation
+  - OCI-compliant with support for standard container images
+
 ### Changed
 - **Complete Migration to Bun.js**: Replaced entire JavaScript toolchain with Bun
   - Package management: Migrated from pnpm to Bun workspaces

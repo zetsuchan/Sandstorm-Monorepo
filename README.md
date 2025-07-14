@@ -17,7 +17,7 @@ AI teams now juggle 4-5 sandbox clouds—E2B for quick REPLs, Modal for heavy jo
 
 Sandstorm is a vendor-agnostic Sandbox Routing Layer that provides:
 
-- **One 5-line SDK** (`sandstorm.run(code, spec)`) that dispatches to E2B, Daytona, Modal, Morph, your own Kubernetes cluster, or rootless edge agents
+- **One 5-line SDK** (`sandstorm.run(code, spec)`) that dispatches to E2B, Daytona, Modal, Apple Containers, Morph, your own Kubernetes cluster, or rootless edge agents
 - **Smart arbitrage engine** chooses the fastest or cheapest backend in real time, with automatic retry on quota errors
 - **Unified telemetry & billing**: single dashboard for logs, snapshots, spend, and compliance across all sandboxes
 - **Pluggable policies**: bring-your-own isolation rules, egress firewall, Secrets Manager integration, SOC-2 audit trail
@@ -65,9 +65,9 @@ const result = await sandstorm.run({
                                  │
         ┌────────────┬───────────┼───────────┬────────────┐
         │            │           │           │            │
-   ┌────▼────┐  ┌────▼────┐ ┌───▼────┐ ┌───▼────┐  ┌────▼────┐
-   │   E2B   │  │  Modal  │ │Daytona │ │  Morph │  │   K8s   │
-   └─────────┘  └─────────┘ └────────┘ └────────┘  └─────────┘
+   ┌────▼────┐  ┌────▼────┐ ┌───▼────┐ ┌───▼────┐  ┌────▼────┐  ┌────▼────┐
+   │   E2B   │  │  Modal  │ │Daytona │ │  Apple │  │  Morph │  │   K8s   │
+   └─────────┘  └─────────┘ └────────┘ └────────┘  └─────────┘  └─────────┘
 ```
 
 ## Key Features
@@ -106,6 +106,7 @@ sandstorm-monorepo/
 │   │   ├── e2b/        # E2B Code Interpreter integration
 │   │   ├── modal/      # Modal serverless infrastructure
 │   │   ├── daytona/    # Daytona fast workspace provider
+│   │   ├── apple-containers/ # Apple's native containerization with VM isolation
 │   │   └── bare-metal/ # Bare metal with bootc images
 │   ├── arbitrage/      # Cost optimization engine
 │   └── telemetry/      # Unified logging/monitoring
@@ -174,7 +175,7 @@ See the [Self-Hosted Deployment Guide](./docs/self-hosted-deployment.md) for det
 - [x] Core routing engine
 - [x] Rootless edge agent with Podman support
 - [x] SDK with edge mode integration
-- [x] E2B, Modal, Daytona adapters
+- [x] E2B, Modal, Daytona, Apple Containers adapters
 - [ ] Cost optimization algorithm
 - [ ] Snapshot vault with on-chain anchoring
 - [ ] Enterprise security features

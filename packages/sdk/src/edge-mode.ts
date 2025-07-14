@@ -36,7 +36,7 @@ export class EdgeModeClient implements ISandboxProvider {
   private client: AxiosInstance;
   private agentInfo?: EdgeAgentInfo;
   
-  constructor(private config: EdgeAgentConfig) {
+  constructor(config: EdgeAgentConfig) {
     this.client = axios.create({
       baseURL: config.agentUrl,
       timeout: config.timeout || 120000,
@@ -67,12 +67,12 @@ export class EdgeModeClient implements ISandboxProvider {
     }
   }
   
-  async estimateCost(spec: SandboxSpec): Promise<number> {
+  async estimateCost(_spec: SandboxSpec): Promise<number> {
     // Edge agents have no direct cost
     return 0;
   }
   
-  async estimateLatency(spec: SandboxSpec): Promise<number> {
+  async estimateLatency(_spec: SandboxSpec): Promise<number> {
     // Estimate based on agent resources
     if (!this.agentInfo) {
       await this.connect();
@@ -101,16 +101,17 @@ export class EdgeModeClient implements ISandboxProvider {
       memory: options.constraints?.memory,
       timeout: options.constraints?.timeout,
       gpu: options.constraints?.gpu,
+      isolationLevel: 'standard',
     };
     
     return this.run(spec);
   }
   
-  async snapshot(sandboxId: string): Promise<any> {
+  async snapshot(_sandboxId: string): Promise<any> {
     throw new Error('Snapshots not supported on edge agents');
   }
   
-  async restore(snapshotId: string): Promise<string> {
+  async restore(_snapshotId: string): Promise<string> {
     throw new Error('Snapshots not supported on edge agents');
   }
   
@@ -179,6 +180,7 @@ export class SandstormEdge {
       requirements: options.requirements,
       environment: options.environment,
       files: options.files,
+      isolationLevel: 'standard',
     } : options;
     
     // Try edge agents first if preferred

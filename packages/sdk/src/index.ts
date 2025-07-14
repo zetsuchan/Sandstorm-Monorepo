@@ -1,10 +1,13 @@
-export { Sandstorm, SandstormConfig, RunOptions } from './client';
+export { Sandstorm } from './client';
+export type { SandstormConfig, RunOptions } from './client';
 export { 
   SandstormEdge, 
-  SandstormEdgeConfig,
   EdgeModeClient,
-  EdgeAgentConfig,
-  EdgeAgentInfo,
   createSandstormEdge
+} from './edge-mode';
+export type {
+  SandstormEdgeConfig,
+  EdgeAgentConfig,
+  EdgeAgentInfo
 } from './edge-mode';
 export * from '@sandstorm/core';
