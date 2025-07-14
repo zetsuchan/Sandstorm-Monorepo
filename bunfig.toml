@@ -1,0 +1,61 @@
+# Bun configuration for Sandstorm monorepo
+
+# Workspaces configuration
+[install]
+# Auto-install peer dependencies
+auto = "fallback"
+
+# Cache directory
+globalDir = "~/.bun/install/global"
+
+# Registry configuration
+registry = "https://registry.npmjs.org"
+
+# Lockfile configuration
+[install.lockfile]
+# Save exact versions in lockfile
+save = true
+
+# Print lockfile diffs in yarn style (easier to read)
+print = "yarn"
+
+# Workspace packages
+[workspaces]
+packages = [
+  "packages/*",
+  "packages/adapters/*",
+  "services/*",
+  "apps/*"
+]
+
+# Test configuration
+[test]
+# Test runner settings
+coverage = true
+coverageDirectory = "./coverage"
+
+# Run configuration
+[run]
+# Show command output
+silent = false
+
+# Use Bun runtime for all scripts
+shell = "bun"
+
+# Development configuration
+[debug]
+# Enable source maps
+sourceMap = true
+
+# JSX configuration (for React components if needed)
+[jsx]
+# React 17+ JSX transform
+runtime = "automatic"
+importSource = "react"
+
+# Macro configuration
+[macro]
+# Disable macros for security
+enabled = false
+
+# Telemetry is disabled by default in Bun

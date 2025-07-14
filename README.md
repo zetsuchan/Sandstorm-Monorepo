@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://img.shields.io/github/actions/workflow/status/zetsuchan/Sandstorm-Monorepo/ci.yml?label=CI)](https://github.com/zetsuchan/Sandstorm-Monorepo/actions)
+[![Bun](https://img.shields.io/badge/bun-1.0%2B-F472B6.svg)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/rust-1.82%2B-orange.svg)](https://www.rust-lang.org/)
 [![Production Ready](https://img.shields.io/badge/production-ready-brightgreen.svg)](https://github.com/zetsuchan/Sandstorm-Monorepo)
 [![Sandstorm](https://img.shields.io/badge/Sandstorm-2024--2025-blue.svg)](https://github.com/zetsuchan/Sandstorm-Monorepo)
@@ -119,9 +120,8 @@ sandstorm-monorepo/
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- pnpm 8+
-- Rust 1.70+ (for gateway service)
+- Bun 1.0+ (JavaScript runtime & package manager)
+- Rust 1.82+ (for gateway service)
 
 ### Installation
 
@@ -131,13 +131,16 @@ git clone https://github.com/sandstorm/sandstorm.git
 cd sandstorm-monorepo
 
 # Install dependencies
-pnpm install
+bun install
 
 # Build all packages
-pnpm build
+bun run build
 
 # Run development servers
-pnpm dev
+bun run dev
+
+# Run tests
+bun run test
 ```
 
 ### Self-Hosted Edge Deployment
@@ -146,7 +149,7 @@ For running sandboxes on your own infrastructure:
 
 ```bash
 # Install edge agent globally
-npm install -g @sandstorm/edge-agent
+bun install -g @sandstorm/edge-agent
 
 # Check system requirements
 sandstorm-edge check
@@ -171,7 +174,7 @@ See the [Self-Hosted Deployment Guide](./docs/self-hosted-deployment.md) for det
 - [x] Core routing engine
 - [x] Rootless edge agent with Podman support
 - [x] SDK with edge mode integration
-- [ ] E2B, Modal, Daytona adapters
+- [x] E2B, Modal, Daytona adapters
 - [ ] Cost optimization algorithm
 - [ ] Snapshot vault with on-chain anchoring
 - [ ] Enterprise security features

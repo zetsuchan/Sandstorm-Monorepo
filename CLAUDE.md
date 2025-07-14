@@ -17,34 +17,37 @@ Sandstorm is a vendor-agnostic Sandbox Routing Layer that provides a unified API
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 
 # Build all packages
-pnpm build
+bun run build
 
 # Run development servers
-pnpm dev
+bun run dev
 
 # Run tests
-pnpm test
+bun run test
 
 # Run tests for specific package
-cd packages/<package-name> && pnpm test
+cd packages/<package-name> && bun test
 
 # Run integration tests
-RUN_INTEGRATION_TESTS=1 pnpm test
+RUN_INTEGRATION_TESTS=1 bun test
 
 # Lint code
-pnpm lint
+bun run lint
 
 # Type checking
-pnpm typecheck
+bun run typecheck
 
 # Format code
-pnpm format
+bun run format
 
 # Clean build artifacts
-pnpm clean
+bun run clean
+
+# Run scripts directly with Bun
+bun scripts/build.ts
 ```
 
 ## Package Structure
@@ -67,17 +70,19 @@ Rust services in `/services`:
 
 ## Testing Approach
 
-- **Framework**: Vitest for TypeScript packages
+- **Framework**: Bun's built-in test runner
 - **Test Location**: Tests are co-located with source files or in `__tests__` directories
 - **Integration Tests**: Require `RUN_INTEGRATION_TESTS=1` environment variable
 - **Container Testing**: Mocked Podman/Docker for unit tests, real containers for integration tests
+- **Test Syntax**: Uses `bun:test` with `describe`, `it`, `expect`, etc.
 
 ## Build System
 
-- **TypeScript**: tsup for building packages
+- **TypeScript**: Bun's built-in bundler (replaced tsup)
 - **Rust**: Cargo for services
 - **Orchestration**: Turbo for efficient monorepo builds
-- **Configuration**: Shared TypeScript config in `/packages/tsconfig`
+- **Runtime**: Bun for all JavaScript/TypeScript execution
+- **Package Manager**: Bun (replaced pnpm)
 
 ## Key Documentation
 

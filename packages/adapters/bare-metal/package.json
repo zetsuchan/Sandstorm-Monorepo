@@ -13,11 +13,12 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "bun ../../scripts/build.ts --format both",
+    "dev": "bun --watch ../../scripts/build.ts --format both",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "bun test"
   },
   "dependencies": {
     "@sandstorm/core": "workspace:*",
@@ -29,8 +30,8 @@
   "devDependencies": {
     "@types/uuid": "^9.0.7",
     "@types/node": "^20.11.0",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "bun-types": "^1.0.0"
   },
   "publishConfig": {
     "access": "public"

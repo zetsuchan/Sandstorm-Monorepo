@@ -12,9 +12,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
-    "test": "vitest",
+    "build": "bun ../../scripts/build.ts --format both --entrypoints src/index.ts --entrypoints src/cli.ts",
+    "dev": "bun --watch ../../scripts/build.ts --format both --entrypoints src/index.ts --entrypoints src/cli.ts",
+    "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },
@@ -35,9 +35,8 @@
     "@types/node": "^20.11.0",
     "@types/uuid": "^9.0.7",
     "@types/ws": "^8.5.10",
-    "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "bun-types": "^1.0.0"
   },
   "publishConfig": {
     "access": "public"

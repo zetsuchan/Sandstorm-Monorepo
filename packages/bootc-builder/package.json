@@ -13,8 +13,9 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "bun ../../scripts/build.ts --format both",
+    "dev": "bun --watch ../../scripts/build.ts --format both",
+    "test": "bun test",
     "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
@@ -30,8 +31,8 @@
     "@types/dockerode": "^3.3.23",
     "@types/tar-fs": "^2.0.4",
     "@types/node": "^20.11.0",
-    "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "bun-types": "^1.0.0"
   },
   "publishConfig": {
     "access": "public"

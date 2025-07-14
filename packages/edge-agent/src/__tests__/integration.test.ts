@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { EdgeAgent } from '../agent';
 import { EdgeAgentConfig } from '../types';
 import { createSandstormEdge } from '@sandstorm/sdk';
@@ -35,7 +35,7 @@ describe('Edge Agent Integration', () => {
     }
   });
 
-  it.skipIf(!process.env.RUN_INTEGRATION_TESTS)(
+  it.if(process.env.RUN_INTEGRATION_TESTS)(
     'should start agent and handle requests',
     async () => {
       // Start the agent
@@ -64,7 +64,7 @@ describe('Edge Agent Integration', () => {
     60000
   );
 
-  it.skipIf(!process.env.RUN_INTEGRATION_TESTS)(
+  it.if(process.env.RUN_INTEGRATION_TESTS)(
     'should work with SDK edge mode',
     async () => {
       // Start the agent if not already running

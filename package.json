@@ -1,6 +1,6 @@
 {
   "name": "sandstorm-monorepo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Vendor-agnostic Sandbox Routing Layer for AI teams",
   "repository": {
@@ -30,10 +30,10 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "turbo run build --filter='./packages/*' && changeset publish"
+    "format": "bunx prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "changeset": "bunx changeset",
+    "version": "bunx changeset version",
+    "release": "turbo run build --filter='./packages/*' && bunx changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",
@@ -44,7 +44,6 @@
   },
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
-  "packageManager": "pnpm@8.14.0"
+    "bun": ">=1.0.0"
+  }
 }

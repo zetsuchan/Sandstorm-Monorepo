@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll } from 'bun:test';
 import { PodmanAdapter } from '../adapters/podman';
 import { EdgeAgentConfig } from '../types';
 
@@ -68,7 +68,7 @@ describe('PodmanAdapter', () => {
   });
 
   // Integration test - only run if podman is available
-  it.skipIf(!process.env.RUN_INTEGRATION_TESTS)(
+  it.if(process.env.RUN_INTEGRATION_TESTS)(
     'should run a simple python sandbox',
     async () => {
       const result = await adapter.runSandbox({

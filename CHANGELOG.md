@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-07-14
+
+### Changed
+- **Complete Migration to Bun.js**: Replaced entire JavaScript toolchain with Bun
+  - Package management: Migrated from pnpm to Bun workspaces
+  - Build system: Replaced tsup with Bun's native bundler
+  - Test runner: Migrated from Vitest to Bun's built-in test framework
+  - Runtime: Now using Bun as the primary JavaScript runtime
+- **Performance Improvements**: 
+  - Faster installs with Bun's binary lockfile
+  - Reduced build times with native bundling
+  - Improved test execution speed
+- **Developer Experience**:
+  - Simplified toolchain with single tool for all JS operations
+  - Native TypeScript execution without compilation step
+  - Built-in test runner with familiar syntax
+
+### Technical Details
+- **Bun Version**: 1.0+
+- **Build Configuration**: Custom build script using Bun.build API
+- **Test Migration**: Updated all test imports from 'vitest' to 'bun:test'
+- **CI/CD**: Updated GitHub Actions to use oven-sh/setup-bun
+
+### Migration Notes
+- Removed `pnpm-workspace.yaml` in favor of `bunfig.toml`
+- Updated all package.json scripts to use Bun commands
+- Replaced `it.skipIf` with `it.if` for conditional tests
+- All TypeScript packages now built with Bun's bundler
+
 ## [0.2.0] - 2025-07-13
 
 ### Added
@@ -68,7 +97,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - License (MIT)
 - Core package definitions
 
-[Unreleased]: https://github.com/sandstorm/sandstorm/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sandstorm/sandstorm/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/sandstorm/sandstorm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sandstorm/sandstorm/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sandstorm/sandstorm/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/sandstorm/sandstorm/releases/tag/v0.0.1
