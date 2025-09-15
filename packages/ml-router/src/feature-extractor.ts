@@ -2,6 +2,15 @@ import { SandboxSpec, SandboxProvider, Language } from '@sandstorm/core';
 import { FeatureVector, TrainingDataPoint, IFeatureExtractor } from './types';
 import { getHours, getDay, isWeekend } from 'date-fns';
 
+interface EdgeAgentSnapshot {
+  agentId: string;
+  status?: string;
+  queueDepth: number;
+  running: number;
+  cpuPercent?: number | null;
+  memoryPercent?: number | null;
+}
+
 export class FeatureExtractor implements IFeatureExtractor {
   private languageToIndex: Record<string, number> = {
     python: 0,
@@ -68,6 +77,12 @@ export class FeatureExtractor implements IFeatureExtractor {
       avgProviderCost: 0,
       providerFailureRate: 0,
       providerAvailability: 1,
+
+      // Edge extras default to zeroed values
+      edgeQueueDepth: 0,
+      edgeRunning: 0,
+      edgeCpuPercent: 0,
+      edgeMemoryPercent: 0,
     };
 
     return features;
@@ -76,7 +91,8 @@ export class FeatureExtractor implements IFeatureExtractor {
   async extractFeaturesWithHistory(
     spec: SandboxSpec,
     provider: SandboxProvider,
-    historicalData: TrainingDataPoint[]
+    historicalData: TrainingDataPoint[],
+    edgeAgents?: EdgeAgentSnapshot[],
   ): Promise<FeatureVector> {
     const features = await this.extractFeatures(spec, provider);
     
@@ -104,6 +120,21 @@ export class FeatureExtractor implements IFeatureExtractor {
       features.avgProviderCost = this.getDefaultCost(provider);
       features.providerFailureRate = 0.01; // Assume 1% failure rate
       features.providerAvailability = 0.99;
+    }
+
+    if (provider === 'edge' && edgeAgents && edgeAgents.length > 0) {
+      const healthy = edgeAgents.filter(agent => agent.status === 'running');
+      const cohort = healthy.length > 0 ? healthy : edgeAgents;
+
+      const avgQueue = cohort.reduce((sum, agent) => sum + agent.queueDepth, 0) / cohort.length;
+      const avgRunning = cohort.reduce((sum, agent) => sum + agent.running, 0) / cohort.length;
+      const avgCpu = cohort.reduce((sum, agent) => sum + (agent.cpuPercent ?? 0), 0) / cohort.length;
+      const avgMemory = cohort.reduce((sum, agent) => sum + (agent.memoryPercent ?? 0), 0) / cohort.length;
+
+      features.edgeQueueDepth = avgQueue;
+      features.edgeRunning = avgRunning;
+      features.edgeCpuPercent = avgCpu;
+      features.edgeMemoryPercent = avgMemory;
     }
 
     return features;
@@ -160,6 +191,11 @@ export class FeatureExtractor implements IFeatureExtractor {
       // Log scale for historical metrics
       avgProviderLatency: Math.log1p(features.avgProviderLatency),
       avgProviderCost: Math.log1p(features.avgProviderCost),
+
+      edgeQueueDepth: Math.log1p(features.edgeQueueDepth),
+      edgeRunning: Math.log1p(features.edgeRunning),
+      edgeCpuPercent: features.edgeCpuPercent / 100,
+      edgeMemoryPercent: features.edgeMemoryPercent / 100,
     };
   }
 }

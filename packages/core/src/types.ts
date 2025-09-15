@@ -77,6 +77,8 @@ export const SandboxResult = z.object({
     cpuUsage: z.number().optional(),
     memoryUsage: z.number().optional(),
     gpuUsage: z.number().optional(),
+    networkRxBytes: z.number().optional(),
+    networkTxBytes: z.number().optional(),
   }).optional(),
 });
 export type SandboxResult = z.infer<typeof SandboxResult>;

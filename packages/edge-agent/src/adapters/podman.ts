@@ -12,7 +12,7 @@ const execAsync = promisify(exec);
 export class PodmanAdapter implements ContainerRuntime {
   name = 'podman';
   private socketPath?: string;
-  
+
   constructor(private config?: { socketPath?: string; rootless?: boolean }) {
     if (config?.socketPath) {
       this.socketPath = config.socketPath;
@@ -25,7 +25,7 @@ export class PodmanAdapter implements ContainerRuntime {
       this.socketPath = '/run/podman/podman.sock';
     }
   }
-  
+
   async isAvailable(): Promise<boolean> {
     try {
       const { stdout } = await execAsync('podman --version');
@@ -34,20 +34,20 @@ export class PodmanAdapter implements ContainerRuntime {
       return false;
     }
   }
-  
+
   async runSandbox(spec: SandboxSpec, config: EdgeAgentConfig): Promise<SandboxResult> {
     const startTime = Date.now();
     const containerId = `sandstorm-${uuid()}`;
     const workDir = path.join(config.tempDir, containerId);
-    
+
     try {
       // Create working directory
       await fs.mkdir(workDir, { recursive: true });
-      
+
       // Write code to file
       const codeFile = path.join(workDir, this.getFileName(spec.language));
       await fs.writeFile(codeFile, spec.code);
-      
+
       // Write additional files if provided
       if (spec.files) {
         for (const [filename, content] of Object.entries(spec.files)) {
@@ -56,50 +56,68 @@ export class PodmanAdapter implements ContainerRuntime {
           await fs.writeFile(filePath, content);
         }
       }
-      
+
       // Prepare container image
       const image = this.getImage(spec.language);
-      
+
       // Build podman run command
       const args = [
         'run',
-        '--rm',
-        '--name', containerId,
-        '--workdir', '/workspace',
-        '-v', `${workDir}:/workspace:Z`,
-        '--memory', `${spec.memory || 512}m`,
-        '--cpus', `${spec.cpu || 1}`,
+        '--name',
+        containerId,
+        '--workdir',
+        '/workspace',
+        '-v',
+        `${workDir}:/workspace:Z`,
+        '--memory',
+        `${spec.memory || 512}m`,
+        '--cpus',
+        `${spec.cpu || 1}`,
       ];
-      
+
       // Add security options for rootless mode
       if (config.rootless) {
         args.push('--userns=keep-id');
         args.push('--security-opt', 'label=disable');
       }
-      
+
       // Network isolation
       if (config.enableNetworkIsolation) {
         args.push('--network', 'none');
       }
-      
+
       // Environment variables
       if (spec.environment) {
         for (const [key, value] of Object.entries(spec.environment)) {
           args.push('-e', `${key}=${value}`);
         }
       }
-      
+
       // Add timeout
       const timeout = spec.timeout || 60000;
       args.push('--timeout', Math.ceil(timeout / 1000).toString());
-      
+
       // Add image and command
       args.push(image);
       args.push(...this.getCommand(spec.language, codeFile));
-      
+
       // Execute container
-      const result = await this.executeContainer('podman', args, timeout);
-      
+      const samples: Array<{
+        cpuPercent: number;
+        memoryMB: number;
+        networkRxBytes: number;
+        networkTxBytes: number;
+        timestamp: string;
+      }> = [];
+
+      const result = await this.executeContainer('podman', args, timeout, {
+        containerId,
+        onSample: (sample) => {
+          samples.push({ ...sample, timestamp: new Date().toISOString() });
+        },
+        sampleIntervalMs: 1000,
+      });
+
       // Read output files if any were created
       const outputFiles: Record<string, string> = {};
       try {
@@ -113,7 +131,22 @@ export class PodmanAdapter implements ContainerRuntime {
       } catch {
         // Ignore errors reading output files
       }
-      
+
+      const latestSample = samples[samples.length - 1];
+      const peakMemory = samples.reduce((max, sample) => Math.max(max, sample.memoryMB), 0);
+      const avgCpu =
+        samples.length > 0
+          ? samples.reduce((total, sample) => total + sample.cpuPercent, 0) / samples.length
+          : spec.cpu || 0;
+      const rxDelta =
+        samples.length > 1
+          ? Math.max(samples[samples.length - 1].networkRxBytes - samples[0].networkRxBytes, 0)
+          : (latestSample?.networkRxBytes ?? 0);
+      const txDelta =
+        samples.length > 1
+          ? Math.max(samples[samples.length - 1].networkTxBytes - samples[0].networkTxBytes, 0)
+          : (latestSample?.networkTxBytes ?? 0);
+
       return {
         id: containerId,
         provider: 'edge' as any,
@@ -124,8 +157,10 @@ export class PodmanAdapter implements ContainerRuntime {
         cost: 0, // Edge agent doesn't have direct costs
         files: Object.keys(outputFiles).length > 0 ? outputFiles : undefined,
         metrics: {
-          cpuUsage: spec.cpu || 1,
-          memoryUsage: spec.memory || 512,
+          cpuUsage: Number.isFinite(avgCpu) ? Number(avgCpu.toFixed(2)) : undefined,
+          memoryUsage: peakMemory || spec.memory || 0,
+          networkRxBytes: rxDelta,
+          networkTxBytes: txDelta,
         },
       };
     } finally {
@@ -135,9 +170,10 @@ export class PodmanAdapter implements ContainerRuntime {
       } catch {
         // Ignore cleanup errors
       }
+      await this.cleanup(containerId);
     }
   }
-  
+
   async cleanup(containerId: string): Promise<void> {
     try {
       await execAsync(`podman stop ${containerId} || true`);
@@ -146,7 +182,7 @@ export class PodmanAdapter implements ContainerRuntime {
       // Ignore cleanup errors
     }
   }
-  
+
   async getContainerStats(containerId: string): Promise<{
     cpuPercent: number;
     memoryMB: number;
@@ -156,7 +192,7 @@ export class PodmanAdapter implements ContainerRuntime {
     try {
       const { stdout } = await execAsync(`podman stats --no-stream --format json ${containerId}`);
       const stats = JSON.parse(stdout);
-      
+
       if (Array.isArray(stats) && stats.length > 0) {
         const stat = stats[0];
         return {
@@ -169,7 +205,7 @@ export class PodmanAdapter implements ContainerRuntime {
     } catch {
       // Return zeros on error
     }
-    
+
     return {
       cpuPercent: 0,
       memoryMB: 0,
@@ -177,7 +213,7 @@ export class PodmanAdapter implements ContainerRuntime {
       networkTxBytes: 0,
     };
   }
-  
+
   private getImage(language: string): string {
     const imageMap: Record<string, string> = {
       python: 'docker.io/python:3.11-slim',
@@ -189,10 +225,10 @@ export class PodmanAdapter implements ContainerRuntime {
       cpp: 'docker.io/gcc:13',
       shell: 'docker.io/alpine:latest',
     };
-    
+
     return imageMap[language] || 'docker.io/alpine:latest';
   }
-  
+
   private getFileName(language: string): string {
     const fileMap: Record<string, string> = {
       python: 'main.py',
@@ -204,13 +240,13 @@ export class PodmanAdapter implements ContainerRuntime {
       cpp: 'main.cpp',
       shell: 'main.sh',
     };
-    
+
     return fileMap[language] || 'main.txt';
   }
-  
+
   private getCommand(language: string, codeFile: string): string[] {
     const filename = path.basename(codeFile);
-    
+
     const commandMap: Record<string, string[]> = {
       python: ['python', filename],
       javascript: ['node', filename],
@@ -221,11 +257,25 @@ export class PodmanAdapter implements ContainerRuntime {
       cpp: ['sh', '-c', `g++ ${filename} -o main && ./main`],
       shell: ['sh', filename],
     };
-    
+
     return commandMap[language] || ['cat', filename];
   }
-  
-  private executeContainer(command: string, args: string[], timeout: number): Promise<{
+
+  private executeContainer(
+    command: string,
+    args: string[],
+    timeout: number,
+    options?: {
+      containerId?: string;
+      sampleIntervalMs?: number;
+      onSample?: (sample: {
+        cpuPercent: number;
+        memoryMB: number;
+        networkRxBytes: number;
+        networkTxBytes: number;
+      }) => void;
+    }
+  ): Promise<{
     stdout: string;
     stderr: string;
     exitCode: number;
@@ -235,24 +285,60 @@ export class PodmanAdapter implements ContainerRuntime {
       let stdout = '';
       let stderr = '';
       let timedOut = false;
-      
+      let statsInterval: NodeJS.Timeout | undefined;
+
       const timer = setTimeout(() => {
         timedOut = true;
         child.kill('SIGTERM');
         setTimeout(() => child.kill('SIGKILL'), 5000);
       }, timeout);
-      
+
+      const scheduleSampling = () => {
+        if (!options?.containerId || !options.onSample) {
+          return;
+        }
+        const interval = options.sampleIntervalMs ?? 1000;
+        const collect = async () => {
+          try {
+            const stats = await this.getContainerStats(options.containerId!);
+            options.onSample!(stats);
+          } catch {
+            // ignore missing stats (container may not be ready yet)
+          }
+        };
+        statsInterval = setInterval(() => {
+          collect();
+        }, interval);
+        // initial sample with a slight delay to allow container startup
+        setTimeout(
+          () => {
+            collect();
+          },
+          Math.min(500, interval)
+        );
+      };
+
+      scheduleSampling();
+
       child.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-      
+
       child.stderr.on('data', (data) => {
         stderr += data.toString();
       });
-      
+
       child.on('close', (code) => {
         clearTimeout(timer);
-        
+        if (statsInterval) {
+          clearInterval(statsInterval);
+        }
+        if (options?.containerId && options?.onSample) {
+          this.getContainerStats(options.containerId)
+            .then(options.onSample)
+            .catch(() => undefined);
+        }
+
         if (timedOut) {
           resolve({
             stdout,
@@ -267,33 +353,33 @@ export class PodmanAdapter implements ContainerRuntime {
           });
         }
       });
-      
+
       child.on('error', (err) => {
         clearTimeout(timer);
         reject(err);
       });
     });
   }
-  
+
   private parseMemory(memStr: string): number {
     const match = memStr.match(/(\d+\.?\d*)\s*([KMGT]?i?B?)/i);
     if (!match) return 0;
-    
+
     const value = parseFloat(match[1]);
     const unit = match[2].toUpperCase();
-    
+
     const multipliers: Record<string, number> = {
-      'B': 1 / (1024 * 1024),
-      'KB': 1 / 1024,
-      'MB': 1,
-      'GB': 1024,
-      'TB': 1024 * 1024,
-      'KIB': 1 / 1024,
-      'MIB': 1,
-      'GIB': 1024,
-      'TIB': 1024 * 1024,
+      B: 1 / (1024 * 1024),
+      KB: 1 / 1024,
+      MB: 1,
+      GB: 1024,
+      TB: 1024 * 1024,
+      KIB: 1 / 1024,
+      MIB: 1,
+      GIB: 1024,
+      TIB: 1024 * 1024,
     };
-    
+
     const multiplier = multipliers[unit] || 1;
     return Math.round(value * multiplier);
   }

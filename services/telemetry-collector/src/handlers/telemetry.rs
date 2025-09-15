@@ -24,6 +24,7 @@ pub async fn track_sandbox_run(
     State(state): State<AppState>,
     Json(request): Json<SandboxRunRequest>,
 ) -> AppResult<Json<SandboxRun>> {
+    let timestamp = request.timestamp.unwrap_or_else(Utc::now);
     let sandbox_run = SandboxRun {
         id: Uuid::new_v4(),
         sandbox_id: request.sandbox_id,
@@ -37,19 +38,34 @@ pub async fn track_sandbox_run(
         has_gpu: request.has_gpu,
         timeout_ms: request.timeout_ms,
         success: request.exit_code == 0,
-        created_at: Utc::now(),
+        cpu_percent: request.cpu_percent,
+        memory_mb: request.memory_mb,
+        network_rx_bytes: request.network_rx_bytes,
+        network_tx_bytes: request.network_tx_bytes,
+        agent_id: request.agent_id.clone(),
+        created_at: timestamp,
     };
 
     // Update metrics
-    state.metrics.sandbox_runs_total
-        .with_label_values(&[&sandbox_run.provider, &sandbox_run.language, &sandbox_run.success.to_string()])
+    state
+        .metrics
+        .sandbox_runs_total
+        .with_label_values(&[
+            &sandbox_run.provider,
+            &sandbox_run.language,
+            &sandbox_run.success.to_string(),
+        ])
         .inc();
-    
-    state.metrics.sandbox_run_duration
+
+    state
+        .metrics
+        .sandbox_run_duration
         .with_label_values(&[&sandbox_run.provider, &sandbox_run.language])
         .observe(sandbox_run.duration_ms as f64);
-    
-    state.metrics.sandbox_run_cost
+
+    state
+        .metrics
+        .sandbox_run_cost
         .with_label_values(&[&sandbox_run.provider])
         .observe(sandbox_run.cost);
 
@@ -60,9 +76,9 @@ pub async fn track_sandbox_run(
         INSERT INTO sandbox_runs (
             id, sandbox_id, provider, language, exit_code, duration_ms, 
             cost, cpu_requested, memory_requested, has_gpu, timeout_ms, 
-            success, created_at
+            success, cpu_percent, memory_mb, network_rx_bytes, network_tx_bytes, agent_id, created_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *
         "#,
         sandbox_run.id,
@@ -77,10 +93,41 @@ pub async fn track_sandbox_run(
         sandbox_run.has_gpu,
         sandbox_run.timeout_ms,
         sandbox_run.success,
+        sandbox_run.cpu_percent,
+        sandbox_run.memory_mb,
+        sandbox_run.network_rx_bytes,
+        sandbox_run.network_tx_bytes,
+        sandbox_run.agent_id,
         sandbox_run.created_at
     )
     .fetch_one(state.db.pool())
     .await?;
+
+    if let Some(agent_id) = sandbox_run.agent_id.clone() {
+        sqlx::query!(
+            r#"
+            INSERT INTO edge_agent_runs (
+                id, agent_id, sandbox_id, provider, language, duration_ms, exit_code,
+                cpu_percent, memory_mb, network_rx_bytes, network_tx_bytes, finished_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#,
+            Uuid::new_v4(),
+            agent_id,
+            sandbox_run.sandbox_id,
+            sandbox_run.provider,
+            sandbox_run.language,
+            sandbox_run.duration_ms,
+            sandbox_run.exit_code,
+            sandbox_run.cpu_percent,
+            sandbox_run.memory_mb,
+            sandbox_run.network_rx_bytes,
+            sandbox_run.network_tx_bytes,
+            sandbox_run.created_at
+        )
+        .execute(state.db.pool())
+        .await?;
+    }
 
     Ok(Json(result))
 }
@@ -90,7 +137,7 @@ pub async fn get_training_data(
     Query(query): Query<TrainingDataQuery>,
 ) -> AppResult<Json<Vec<TrainingData>>> {
     let limit = query.limit.unwrap_or(1000).min(10000);
-    
+
     let data = sqlx::query_as!(
         TrainingData,
         r#"
@@ -157,7 +204,7 @@ pub async fn get_provider_stats(
     Query(time_range): Query<TimeRange>,
 ) -> AppResult<Json<ProviderStats>> {
     let end = time_range.end.unwrap_or_else(Utc::now);
-    
+
     let stats = sqlx::query!(
         r#"
         SELECT 
@@ -203,20 +250,29 @@ pub async fn track_prediction(
     };
 
     // Update metrics
-    state.metrics.predictions_total
+    state
+        .metrics
+        .predictions_total
         .with_label_values(&[&prediction.model_version, &prediction.provider])
         .inc();
 
     if let Some(actual) = &request.actual {
         // Calculate prediction errors
-        let cost_error = ((actual.cost - prediction.predicted_cost).abs() / actual.cost * 100.0).min(100.0);
-        let latency_error = ((actual.latency - prediction.predicted_latency).abs() / actual.latency * 100.0).min(100.0);
+        let cost_error =
+            ((actual.cost - prediction.predicted_cost).abs() / actual.cost * 100.0).min(100.0);
+        let latency_error =
+            ((actual.latency - prediction.predicted_latency).abs() / actual.latency * 100.0)
+                .min(100.0);
 
-        state.metrics.prediction_errors
+        state
+            .metrics
+            .prediction_errors
             .with_label_values(&[&prediction.model_version, "cost"])
             .observe(cost_error);
-        
-        state.metrics.prediction_errors
+
+        state
+            .metrics
+            .prediction_errors
             .with_label_values(&[&prediction.model_version, "latency"])
             .observe(latency_error);
     }
@@ -252,7 +308,7 @@ pub async fn get_model_performance(
     Query(time_range): Query<TimeRange>,
 ) -> AppResult<Json<ModelPerformance>> {
     let end = time_range.end.unwrap_or_else(Utc::now);
-    
+
     let performance = sqlx::query!(
         r#"
         SELECT 

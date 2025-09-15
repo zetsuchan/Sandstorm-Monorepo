@@ -35,6 +35,12 @@ export const FeatureVector = z.object({
   avgProviderCost: z.number(),
   providerFailureRate: z.number(),
   providerAvailability: z.number(),
+  
+  // Edge-specific metrics (zero when not applicable)
+  edgeQueueDepth: z.number(),
+  edgeRunning: z.number(),
+  edgeCpuPercent: z.number(),
+  edgeMemoryPercent: z.number(),
 });
 export type FeatureVector = z.infer<typeof FeatureVector>;
 
@@ -93,6 +99,14 @@ export interface IFeatureExtractor {
   extractFeaturesWithHistory(
     spec: SandboxSpec,
     provider: SandboxProvider,
-    historicalData: TrainingDataPoint[]
+    historicalData: TrainingDataPoint[],
+    edgeAgents?: Array<{
+      agentId: string;
+      status?: string;
+      queueDepth: number;
+      running: number;
+      cpuPercent?: number | null;
+      memoryPercent?: number | null;
+    }>
   ): Promise<FeatureVector>;
 }

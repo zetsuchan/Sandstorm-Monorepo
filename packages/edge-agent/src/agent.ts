@@ -12,6 +12,10 @@ import {
   TelemetryRelay,
   LogEntry
 } from './types';
+import {
+  EdgeSandboxRunMetrics,
+  EdgeSystemMetrics,
+} from '@sandstorm/telemetry';
 import { PodmanAdapter } from './adapters/podman';
 import { CloudTelemetryRelay, MockTelemetryRelay } from './telemetry';
 import pino from 'pino';
@@ -25,20 +29,21 @@ export class EdgeAgent implements ISandboxProvider {
   private agentId: string;
   private startTime: number;
   private logger = pino();
+  private lastRunMetrics?: EdgeSandboxRunMetrics;
+  private currentSystemMetrics?: EdgeSystemMetrics;
+  private systemCounters?: {
+    timestamp: number;
+    rxBytes: number;
+    txBytes: number;
+    diskReadBytes: number;
+    diskWriteBytes: number;
+  };
   
   private stats = {
     running: 0,
     completed: 0,
     failed: 0,
     queued: 0,
-  };
-  
-  private systemMetrics: {
-    cpuUsage: number[];
-    memoryUsage: number[];
-  } = {
-    cpuUsage: [],
-    memoryUsage: [],
   };
   
   constructor(config: EdgeAgentConfig) {
@@ -139,7 +144,7 @@ export class EdgeAgent implements ISandboxProvider {
       this.stats.running--;
       
       // Track metrics
-      this.trackSandboxMetrics(result);
+      await this.trackSandboxMetrics(spec, result);
       
       return result;
     } catch (error) {
@@ -237,50 +242,29 @@ export class EdgeAgent implements ISandboxProvider {
   }
   
   private async getMetrics(): Promise<EdgeAgentMetrics> {
+    if (!this.currentSystemMetrics) {
+      await this.collectSystemMetrics();
+    }
+
     return {
       timestamp: new Date().toISOString(),
       agentId: this.agentId,
-      
-      sandboxMetrics: {
-        totalRuns: this.stats.completed + this.stats.failed,
-        successRate: this.stats.completed / Math.max(1, this.stats.completed + this.stats.failed),
-        avgDuration: 0, // TODO: Track average duration
-        avgMemoryMB: 0, // TODO: Track average memory
-        avgCpuPercent: 0, // TODO: Track average CPU
-      },
-      
-      systemMetrics: {
-        cpuUsage: this.systemMetrics.cpuUsage.slice(-60),
-        memoryUsage: this.systemMetrics.memoryUsage.slice(-60),
-        diskIO: {
-          readBytesPerSec: 0, // TODO: Track disk IO
-          writeBytesPerSec: 0,
-        },
-        networkIO: {
-          rxBytesPerSec: 0, // TODO: Track network IO
-          txBytesPerSec: 0,
-        },
-      },
-      
-      errorCounts: {}, // TODO: Track error types
+      queueDepth: this.stats.queued,
+      running: this.stats.running,
+      completed: this.stats.completed,
+      failed: this.stats.failed,
+      system: this.currentSystemMetrics!,
+      sandboxRun: this.lastRunMetrics,
     };
   }
   
   private startTelemetry(): void {
     // Collect system metrics every 5 seconds
     setInterval(async () => {
-      const cpuInfo = await this.getCpuInfo();
-      const memInfo = await this.getMemoryInfo();
-      
-      this.systemMetrics.cpuUsage.push(cpuInfo.usage);
-      this.systemMetrics.memoryUsage.push(memInfo.used / memInfo.total * 100);
-      
-      // Keep only last 5 minutes of data
-      if (this.systemMetrics.cpuUsage.length > 60) {
-        this.systemMetrics.cpuUsage.shift();
-      }
-      if (this.systemMetrics.memoryUsage.length > 60) {
-        this.systemMetrics.memoryUsage.shift();
+      try {
+        await this.collectSystemMetrics();
+      } catch (error) {
+        this.logger.warn({ error }, 'Failed to collect system metrics');
       }
     }, 5000);
     
@@ -294,9 +278,51 @@ export class EdgeAgent implements ISandboxProvider {
       }
     }, this.config.telemetryInterval);
   }
-  
-  private trackSandboxMetrics(result: SandboxResult): void {
-    // TODO: Implement detailed metrics tracking
+
+  private async trackSandboxMetrics(spec: SandboxSpec, result: SandboxResult): Promise<void> {
+    const metrics = result.metrics ?? {};
+    const runMetrics: EdgeSandboxRunMetrics = {
+      sandboxId: result.id,
+      agentId: this.agentId,
+      provider: 'edge',
+      language: spec.language,
+      durationMs: result.duration,
+      exitCode: result.exitCode,
+      cpuPercent: metrics.cpuUsage ?? null,
+      memoryMB: metrics.memoryUsage ?? null,
+      networkRxBytes: metrics.networkRxBytes ?? null,
+      networkTxBytes: metrics.networkTxBytes ?? null,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.lastRunMetrics = runMetrics;
+
+    if (this.telemetry.sendSandboxRun) {
+      await this.telemetry.sendSandboxRun({
+        telemetry: {
+          sandboxId: result.id,
+          provider: 'edge',
+          language: spec.language,
+          exitCode: result.exitCode,
+          durationMs: result.duration,
+          cost: result.cost,
+          cpuRequested: spec.cpu,
+          memoryRequested: spec.memory,
+          hasGpu: Boolean(spec.gpu),
+          timeoutMs: spec.timeout,
+          cpuPercent: metrics.cpuUsage ?? null,
+          memoryMB: metrics.memoryUsage ?? null,
+          networkRxBytes: metrics.networkRxBytes ?? null,
+          networkTxBytes: metrics.networkTxBytes ?? null,
+          agentId: this.agentId,
+          timestamp: runMetrics.timestamp,
+          spec,
+          result,
+        },
+      }).catch((error) => {
+        this.logger.warn({ error }, 'Failed to push sandbox run telemetry');
+      });
+    }
   }
   
   private async getRuntimeVersion(): Promise<string> {
@@ -325,6 +351,104 @@ export class EdgeAgent implements ISandboxProvider {
     }, 0) / cpus.length;
     
     return { cores: cpus.length, usage: Math.round(usage) };
+  }
+  
+  private async collectSystemMetrics(): Promise<void> {
+    const cpuInfo = await this.getCpuInfo();
+    const memInfo = await this.getMemoryInfo();
+    const load = os.loadavg();
+    const now = Date.now();
+
+    const netCounters = await this.readNetworkCounters();
+    const diskCounters = await this.readDiskCounters();
+
+    let rxRate = 0;
+    let txRate = 0;
+    let diskReadRate = 0;
+    let diskWriteRate = 0;
+
+    if (this.systemCounters) {
+      const elapsed = Math.max(1, (now - this.systemCounters.timestamp) / 1000);
+      if (netCounters) {
+        rxRate = Math.max(0, (netCounters.rxBytes - this.systemCounters.rxBytes) / elapsed);
+        txRate = Math.max(0, (netCounters.txBytes - this.systemCounters.txBytes) / elapsed);
+      }
+      if (diskCounters) {
+        diskReadRate = Math.max(0, (diskCounters.readBytes - this.systemCounters.diskReadBytes) / elapsed);
+        diskWriteRate = Math.max(0, (diskCounters.writeBytes - this.systemCounters.diskWriteBytes) / elapsed);
+      }
+    }
+
+    this.currentSystemMetrics = {
+      cpuPercent: cpuInfo.usage,
+      loadAverage: [load[0], load[1], load[2]],
+      memory: {
+        totalMB: memInfo.total,
+        usedMB: memInfo.used,
+      },
+      network: {
+        rxBytesPerSec: rxRate,
+        txBytesPerSec: txRate,
+      },
+      disk: {
+        readBytesPerSec: diskReadRate,
+        writeBytesPerSec: diskWriteRate,
+      },
+    };
+
+    this.systemCounters = {
+      timestamp: now,
+      rxBytes: netCounters?.rxBytes ?? this.systemCounters?.rxBytes ?? 0,
+      txBytes: netCounters?.txBytes ?? this.systemCounters?.txBytes ?? 0,
+      diskReadBytes: diskCounters?.readBytes ?? this.systemCounters?.diskReadBytes ?? 0,
+      diskWriteBytes: diskCounters?.writeBytes ?? this.systemCounters?.diskWriteBytes ?? 0,
+    };
+  }
+
+  private async readNetworkCounters(): Promise<{ rxBytes: number; txBytes: number } | null> {
+    try {
+      const contents = await fs.readFile('/proc/net/dev', 'utf-8');
+      const lines = contents.split('\n').slice(2);
+      let rx = 0;
+      let tx = 0;
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 17) continue;
+        const iface = parts[0].replace(':', '');
+        if (iface === 'lo') continue;
+        rx += parseInt(parts[1], 10) || 0;
+        tx += parseInt(parts[9], 10) || 0;
+      }
+      return { rxBytes: rx, txBytes: tx };
+    } catch {
+      return null;
+    }
+  }
+
+  private async readDiskCounters(): Promise<{ readBytes: number; writeBytes: number } | null> {
+    try {
+      const contents = await fs.readFile('/proc/diskstats', 'utf-8');
+      const lines = contents.trim().split('\n');
+      let readSectors = 0;
+      let writeSectors = 0;
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 14) continue;
+        const name = parts[2];
+        if (!name || name.startsWith('loop') || name.startsWith('ram')) {
+          continue;
+        }
+        readSectors += parseInt(parts[5], 10) || 0;
+        writeSectors += parseInt(parts[9], 10) || 0;
+      }
+      const sectorSize = 512;
+      return {
+        readBytes: readSectors * sectorSize,
+        writeBytes: writeSectors * sectorSize,
+      };
+    } catch {
+      return null;
+    }
   }
   
   private async getDiskUsage(): Promise<number> {

@@ -12,8 +12,8 @@ mod config;
 mod db;
 mod error;
 mod handlers;
-mod models;
 mod metrics;
+mod models;
 
 use crate::config::Config;
 use crate::db::Database;
@@ -60,22 +60,49 @@ async fn main() -> Result<()> {
     let app = Router::new()
         // Health check
         .route("/health", get(handlers::health::health_check))
-        
+        .route("/v1/edge/health", get(handlers::health::health_check))
         // Telemetry endpoints
-        .route("/api/telemetry/sandbox-run", post(handlers::telemetry::track_sandbox_run))
-        .route("/api/telemetry/training-data", get(handlers::telemetry::get_training_data))
-        .route("/api/telemetry/training-data", post(handlers::telemetry::submit_training_data))
-        
+        .route(
+            "/api/telemetry/sandbox-run",
+            post(handlers::telemetry::track_sandbox_run),
+        )
+        .route(
+            "/api/telemetry/training-data",
+            get(handlers::telemetry::get_training_data),
+        )
+        .route(
+            "/api/telemetry/training-data",
+            post(handlers::telemetry::submit_training_data),
+        )
         // Provider statistics
-        .route("/api/telemetry/provider-stats/:provider", get(handlers::telemetry::get_provider_stats))
-        
+        .route(
+            "/api/telemetry/provider-stats/:provider",
+            get(handlers::telemetry::get_provider_stats),
+        )
         // Model performance tracking
-        .route("/api/telemetry/predictions", post(handlers::telemetry::track_prediction))
-        .route("/api/telemetry/model-performance/:version", get(handlers::telemetry::get_model_performance))
-        
+        .route(
+            "/api/telemetry/predictions",
+            post(handlers::telemetry::track_prediction),
+        )
+        .route(
+            "/api/telemetry/model-performance/:version",
+            get(handlers::telemetry::get_model_performance),
+        )
+        // Edge agent ingestion
+        .route("/v1/edge/status", post(handlers::edge::ingest_status))
+        .route("/v1/edge/metrics", post(handlers::edge::ingest_metrics))
+        .route("/v1/edge/logs", post(handlers::edge::ingest_logs))
+        // Edge agent queries
+        .route(
+            "/api/edge/agents/overview",
+            get(handlers::edge::list_agents),
+        )
+        .route(
+            "/api/edge/agents/:id/runs",
+            get(handlers::edge::list_agent_runs),
+        )
         // Metrics endpoint for Prometheus
         .route("/metrics", get(handlers::metrics::metrics_handler))
-        
         // Add middleware
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
@@ -84,7 +111,7 @@ async fn main() -> Result<()> {
     // Start server
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     info!("Starting telemetry collector on {}", addr);
-    
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
     axum::serve(listener, app).await?;
 

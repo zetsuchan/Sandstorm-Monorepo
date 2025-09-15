@@ -1,8 +1,14 @@
-import axios, { AxiosInstance } from 'axios';
-import { EdgeAgentStatus, EdgeAgentMetrics, TelemetryRelay, LogEntry } from './types';
+import {
+  EdgeAgentStatus,
+  EdgeAgentMetrics,
+  EdgeTelemetryClient,
+  LogEntry,
+  SandboxRunTelemetry,
+} from '@sandstorm/telemetry';
+import { TelemetryRelay } from './types';
 
 export class CloudTelemetryRelay implements TelemetryRelay {
-  private client: AxiosInstance;
+  private client: EdgeTelemetryClient;
   private buffer: {
     status: EdgeAgentStatus[];
     metrics: EdgeAgentMetrics[];
@@ -22,14 +28,10 @@ export class CloudTelemetryRelay implements TelemetryRelay {
       flushInterval?: number;
     }
   ) {
-    this.client = axios.create({
-      baseURL: config.apiUrl,
-      headers: {
-        'Authorization': `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-        'X-Agent-ID': config.agentId,
-      },
-      timeout: 30000,
+    this.client = new EdgeTelemetryClient({
+      baseUrl: config.apiUrl,
+      apiKey: config.apiKey,
+      agentId: config.agentId,
     });
     
     // Start periodic flush
@@ -59,7 +61,11 @@ export class CloudTelemetryRelay implements TelemetryRelay {
       await this.flushLogs();
     }
   }
-  
+
+  async sendSandboxRun(payload: { telemetry: SandboxRunTelemetry }): Promise<void> {
+    await this.client.sendSandboxRun(payload.telemetry);
+  }
+
   private async flush(): Promise<void> {
     await Promise.allSettled([
       this.flushStatus(),
@@ -74,10 +80,7 @@ export class CloudTelemetryRelay implements TelemetryRelay {
     const items = this.buffer.status.splice(0);
     
     try {
-      await this.client.post('/v1/edge/status', {
-        items,
-        timestamp: new Date().toISOString(),
-      });
+      await this.client.sendStatus(items);
     } catch (error) {
       // Re-add items to buffer on failure
       this.buffer.status.unshift(...items.slice(-10)); // Keep only last 10
@@ -91,10 +94,7 @@ export class CloudTelemetryRelay implements TelemetryRelay {
     const items = this.buffer.metrics.splice(0);
     
     try {
-      await this.client.post('/v1/edge/metrics', {
-        items,
-        timestamp: new Date().toISOString(),
-      });
+      await this.client.sendMetrics(items);
     } catch (error) {
       // Re-add items to buffer on failure
       this.buffer.metrics.unshift(...items.slice(-50)); // Keep only last 50
@@ -108,10 +108,7 @@ export class CloudTelemetryRelay implements TelemetryRelay {
     const items = this.buffer.logs.splice(0);
     
     try {
-      await this.client.post('/v1/edge/logs', {
-        items,
-        timestamp: new Date().toISOString(),
-      });
+      await this.client.sendLogs(items);
     } catch (error) {
       // Re-add items to buffer on failure
       this.buffer.logs.unshift(...items.slice(-100)); // Keep only last 100
@@ -120,12 +117,7 @@ export class CloudTelemetryRelay implements TelemetryRelay {
   }
   
   async testConnection(): Promise<boolean> {
-    try {
-      const response = await this.client.get('/v1/edge/health');
-      return response.status === 200;
-    } catch {
-      return false;
-    }
+    return this.client.health();
   }
 }
 
@@ -141,5 +133,9 @@ export class MockTelemetryRelay implements TelemetryRelay {
   
   async sendLogs(logs: LogEntry[]): Promise<void> {
     console.log('[MOCK] Logs:', logs.length, 'entries');
+  }
+
+  async sendSandboxRun(payload: { telemetry: SandboxRunTelemetry }): Promise<void> {
+    console.log('[MOCK] Sandbox run telemetry:', JSON.stringify(payload.telemetry, null, 2));
   }
 }

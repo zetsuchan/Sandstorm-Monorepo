@@ -9,7 +9,7 @@ import {
 import { FeatureExtractor } from './feature-extractor';
 import { LightGBMModel } from './model/lightgbm-model';
 import { ModelStore } from './model-store';
-import { TelemetryClient } from './telemetry-client';
+import { TelemetryClient, EdgeAgentOverview } from './telemetry-client';
 import * as path from 'path';
 
 export class MLRouter implements IMLRouter {
@@ -51,10 +51,13 @@ export class MLRouter implements IMLRouter {
       const candidateProviders = this.getCandidateProviders(constraints);
       
       // Get historical data for feature enrichment
-      const historicalData = await this.telemetryClient.getRecentData(
-        new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
-        100 // Last 100 executions
-      );
+      const [historicalData, edgeAgents] = await Promise.all([
+        this.telemetryClient.getRecentData(
+          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+          100 // Last 100 executions
+        ),
+        this.telemetryClient.getEdgeAgentsOverview(),
+      ]);
 
       // Make predictions for each candidate provider
       const predictions: PredictionResult[] = [];
@@ -63,7 +66,8 @@ export class MLRouter implements IMLRouter {
         const features = await this.featureExtractor.extractFeaturesWithHistory(
           spec,
           provider,
-          historicalData
+          historicalData,
+          edgeAgents,
         );
 
         // Normalize features

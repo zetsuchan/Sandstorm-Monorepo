@@ -1,5 +1,10 @@
 import { z } from 'zod';
 import { SandboxSpec, SandboxResult, SandboxProvider } from '@sandstorm/core';
+import {
+  EdgeAgentStatus,
+  EdgeAgentMetrics,
+  LogEntry,
+} from '@sandstorm/telemetry';
 
 export const EdgeAgentConfig = z.object({
   // Agent identification
@@ -44,72 +49,6 @@ export const EdgeAgentConfig = z.object({
 });
 export type EdgeAgentConfig = z.infer<typeof EdgeAgentConfig>;
 
-export const EdgeAgentStatus = z.object({
-  agentId: z.string(),
-  status: z.enum(['starting', 'running', 'degraded', 'stopping', 'stopped']),
-  version: z.string(),
-  uptime: z.number(),
-  lastHealthCheck: z.string().datetime(),
-  
-  runtime: z.object({
-    type: z.enum(['podman', 'docker']),
-    version: z.string(),
-    rootless: z.boolean(),
-    socketPath: z.string().optional(),
-  }),
-  
-  resources: z.object({
-    totalMemoryMB: z.number(),
-    usedMemoryMB: z.number(),
-    totalCpuCores: z.number(),
-    cpuUsagePercent: z.number(),
-    diskUsageGB: z.number(),
-  }),
-  
-  sandboxes: z.object({
-    running: z.number(),
-    completed: z.number(),
-    failed: z.number(),
-    queued: z.number(),
-  }),
-  
-  connectivity: z.object({
-    cloudApi: z.boolean(),
-    lastSync: z.string().datetime().optional(),
-    publicEndpoint: z.string().optional(),
-  }),
-});
-export type EdgeAgentStatus = z.infer<typeof EdgeAgentStatus>;
-
-export const EdgeAgentMetrics = z.object({
-  timestamp: z.string().datetime(),
-  agentId: z.string(),
-  
-  sandboxMetrics: z.object({
-    totalRuns: z.number(),
-    successRate: z.number(),
-    avgDuration: z.number(),
-    avgMemoryMB: z.number(),
-    avgCpuPercent: z.number(),
-  }),
-  
-  systemMetrics: z.object({
-    cpuUsage: z.array(z.number()),
-    memoryUsage: z.array(z.number()),
-    diskIO: z.object({
-      readBytesPerSec: z.number(),
-      writeBytesPerSec: z.number(),
-    }),
-    networkIO: z.object({
-      rxBytesPerSec: z.number(),
-      txBytesPerSec: z.number(),
-    }),
-  }),
-  
-  errorCounts: z.record(z.string(), z.number()),
-});
-export type EdgeAgentMetrics = z.infer<typeof EdgeAgentMetrics>;
-
 export interface ContainerRuntime {
   name: string;
   isAvailable(): Promise<boolean>;
@@ -127,11 +66,28 @@ export interface TelemetryRelay {
   sendStatus(status: EdgeAgentStatus): Promise<void>;
   sendMetrics(metrics: EdgeAgentMetrics): Promise<void>;
   sendLogs(logs: LogEntry[]): Promise<void>;
+  sendSandboxRun?(payload: {
+    telemetry: {
+      sandboxId: string;
+      provider: SandboxProvider;
+      language: string;
+      exitCode: number;
+      durationMs: number;
+      cost: number;
+      cpuRequested?: number | null;
+      memoryRequested?: number | null;
+      hasGpu: boolean;
+      timeoutMs?: number | null;
+      cpuPercent?: number | null;
+      memoryMB?: number | null;
+      networkRxBytes?: number | null;
+      networkTxBytes?: number | null;
+      agentId?: string;
+      timestamp: string;
+      spec?: Record<string, any>;
+      result?: Record<string, any>;
+    };
+  }): Promise<void>;
 }
 
-export interface LogEntry {
-  timestamp: string;
-  level: 'debug' | 'info' | 'warn' | 'error';
-  message: string;
-  context?: Record<string, any>;
-}
+export type { EdgeAgentStatus, EdgeAgentMetrics, LogEntry };

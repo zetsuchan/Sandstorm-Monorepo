@@ -2,6 +2,17 @@ import axios, { AxiosInstance } from 'axios';
 import { TrainingDataPoint } from './types';
 import { SandboxResult } from '@sandstorm/core';
 
+export interface EdgeAgentOverview {
+  agentId: string;
+  status: string;
+  queueDepth: number;
+  running: number;
+  completed: number;
+  failed: number;
+  cpuPercent?: number | null;
+  memoryPercent?: number | null;
+}
+
 export class TelemetryClient {
   private client: AxiosInstance;
 
@@ -36,6 +47,16 @@ export class TelemetryClient {
       }));
     } catch (error) {
       console.error('Failed to fetch telemetry data:', error);
+      return [];
+    }
+  }
+
+  async getEdgeAgentsOverview(): Promise<EdgeAgentOverview[]> {
+    try {
+      const response = await this.client.get('/api/edge/agents/overview');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch edge agent overview:', error);
       return [];
     }
   }

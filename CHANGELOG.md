@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Shared `@sandstorm/telemetry` package with edge status/metrics schemas and client helpers.
+- Snapshot Vault Axum service for storing snapshot metadata and blobs locally.
+- Sandstorm dashboard app scaffolded with edge fleet, recent runs, and provider performance views.
+
+### Changed
+- Edge agent now samples real Podman stats, streams sandbox run telemetry, and reports richer system metrics.
+- Telemetry collector ingests edge status/metrics/log batches and exposes query APIs consumed by the dashboard and ML router.
+- ML router incorporates live edge capacity signals to inform provider selection for `edge` workloads.
+
+## [Unreleased]
+
 ## [0.3.0] - 2025-07-14
 
 ### Added
