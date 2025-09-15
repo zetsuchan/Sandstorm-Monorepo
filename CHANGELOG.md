@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- _Nothing yet_
+
+## [0.4.0] - 2025-09-15
+
+### Added
 - Shared `@sandstorm/telemetry` package with edge status/metrics schemas and client helpers.
 - Snapshot Vault Axum service for storing snapshot metadata and blobs locally.
 - Sandstorm dashboard app scaffolded with edge fleet, recent runs, and provider performance views.
@@ -118,7 +123,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - License (MIT)
 - Core package definitions
 
-[Unreleased]: https://github.com/sandstorm/sandstorm/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sandstorm/sandstorm/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sandstorm/sandstorm/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sandstorm/sandstorm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sandstorm/sandstorm/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sandstorm/sandstorm/compare/v0.0.1...v0.1.0
